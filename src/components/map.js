@@ -1,13 +1,14 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';
 import './Map.css';
 
 function Map() {
-  const { scene } = useGLTF('/Test-3D.glb'); 
+  const { scene } = useGLTF('/Test-3D.glb');  
   const modelRef = useRef();
   const [selectedNode, setSelectedNode] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredNodes, setFilteredNodes] = useState([]);
 
   useEffect(() => {
     if (scene) {
@@ -17,22 +18,20 @@ function Map() {
 
   const handleNodeClick = (nodeName) => {
     if (modelRef.current) {
-      const node = modelRef.current.getObjectByName(nodeName); 
+      const node = modelRef.current.getObjectByName(nodeName);
       if (node) {
         console.log(`Selected Node: ${nodeName}`);
         setSelectedNode(nodeName);
 
-        
         modelRef.current.traverse((child) => {
           if (child.isMesh) {
-            child.material.color.set('white'); // Reset color to white
+            child.material.color.set('white');
           }
         });
 
-        // Highlight the selected node
         node.traverse((child) => {
           if (child.isMesh) {
-            child.material.color.set('yellow'); 
+            child.material.color.set('yellow');
           }
         });
       } else {
@@ -41,8 +40,40 @@ function Map() {
     }
   };
 
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+
+    if (modelRef.current) {
+      const nodes = [];
+      modelRef.current.traverse((child) => {
+        if (child.name.toLowerCase().includes(value.toLowerCase())) {
+          nodes.push(child.name);
+        }
+      });
+      setFilteredNodes(nodes);
+    }
+  };
+
   return (
     <div className="map-container">
+      <div className="search-box">
+        <input
+          type="text"
+          placeholder="Search nodes..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+        />
+        {searchTerm && (
+          <ul className="dropdown">
+            {filteredNodes.map((node, index) => (
+              <li key={index} onClick={() => handleNodeClick(node)}>
+                {node}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       <div className="canvas-container">
         <Canvas camera={{ position: [0, 200, 500], fov: 50 }}>
           <ambientLight intensity={0.5} />
@@ -53,9 +84,6 @@ function Map() {
       </div>
       <div className="node-info">
         {selectedNode && <p>Selected Node: {selectedNode}</p>}
-
-        <button onClick={() => handleNodeClick('foodcourt')}>Select Foodcourt</button>
-        <button onClick={() => handleNodeClick('restroom')}>Select Restroom</button>
       </div>
     </div>
   );
